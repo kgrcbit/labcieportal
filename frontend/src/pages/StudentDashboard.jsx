@@ -8,6 +8,10 @@ export default function StudentDashboard(){
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedLabId, setSelectedLabId] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [passwordMsg, setPasswordMsg] = useState(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const printRef = useRef();
   const handlePrint = useReactToPrint({ content: () => printRef.current, documentTitle: "Lab_Marks_Report" });
 
@@ -62,10 +66,51 @@ export default function StudentDashboard(){
   const labs = data?.labs || [];
   const selectedLab = labs.find(l => (l.labId || "") === selectedLabId);
 
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    setPasswordMsg(null);
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordMsg({ type: "error", text: "New passwords do not match" });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordMsg({ type: "error", text: "New password must be at least 6 characters" });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await API.put("/student/me/password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      setPasswordMsg({ type: "success", text: "Password updated successfully!" });
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordMsg(null);
+      }, 1500);
+    } catch (err) {
+      setPasswordMsg({ type: "error", text: err?.response?.data?.message || "Failed to update password" });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Title */}
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Lab Marks</h1>
+      {/* Title and Actions */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">My Lab Marks</h1>
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+        >
+          Update Password
+        </button>
+      </div>
 
       {/* No labs */}
       {labs.length === 0 && (
@@ -136,6 +181,97 @@ export default function StudentDashboard(){
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Update Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Update Password</h3>
+                <button
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordMsg(null);
+                    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {passwordMsg && (
+                <div className={`mb-4 p-3 rounded-md ${
+                  passwordMsg.type === "success" 
+                    ? "bg-green-50 text-green-800 border border-green-200" 
+                    : "bg-red-50 text-red-800 border border-red-200"
+                }`}>
+                  {passwordMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.currentPassword}
+                    onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.newPassword}
+                    onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.confirmPassword}
+                    onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setPasswordMsg(null);
+                      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                    }}
+                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+                  >
+                    {passwordLoading ? "Updating..." : "Update Password"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

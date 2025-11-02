@@ -65,7 +65,7 @@ export const addLab = async (req, res) => {
 // Assign lab to faculty + auto-generate schedule
 export const assignLab = async (req, res) => {
   try {
-    const { labId, facultyId, section, academicYear, semesterType, startDate, endDate, dayOfWeek } = req.body;
+    const { labId, facultyId, section,batch, academicYear, semesterType, startDate, endDate, dayOfWeek } = req.body;
 
     const lab = await Lab.findById(labId);
     const faculty = await User.findById(facultyId);
@@ -79,6 +79,7 @@ export const assignLab = async (req, res) => {
       labId,
       facultyId,
       section,
+      batch:batch||"All",
       academicYear,
       semesterType,
       startDate,

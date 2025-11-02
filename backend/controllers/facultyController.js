@@ -14,23 +14,32 @@ export const getAssignedLabs = async (req, res) => {
   }
 };
 
-// Get students by lab assignment
 export const getStudentsByLab = async (req, res) => {
   try {
     const { labId } = req.params;
-    const { section } = req.query;
-    
+    const { section, batch } = req.query;
+
     const assignment = await LabAssignment.findById(labId).populate("labId");
     if (!assignment) {
       return res.status(404).json({ message: "Lab assignment not found" });
     }
-    
-    const students = await User.find({ 
-      role: "student", 
+
+    // base query
+    const query = {
+      role: "student",
       section: section || assignment.section,
-      semester: assignment.labId.semester 
-    });
-    
+      semester: assignment.labId.semester,
+    };
+
+    // apply batch if provided or if assignment has batch
+    if (batch && batch !== "All") {
+      query.batch = batch;
+    } else if (assignment.batch && assignment.batch !== "All") {
+      query.batch = assignment.batch;
+    }
+
+    const students = await User.find(query).sort({ username: 1 });
+
     res.json({ students });
   } catch (error) {
     console.error(error);
@@ -41,21 +50,41 @@ export const getStudentsByLab = async (req, res) => {
 // Enter marks for students
 export const enterMarks = async (req, res) => {
   try {
-    const { labAssignmentId, date, marks } = req.body; // marks = [{ studentId, marks }]
+    const { labAssignmentId, date, marks } = req.body; // marks = [{ studentId, Pr, PE, P, R, C, T }]
     const entryDate = new Date(date);
 
     for (const mark of marks) {
-      const { studentId, marks: obtained } = mark;
+      const { studentId, Pr, PE, P, R, C, T } = mark;
+
+      // Calculate total if individual marks are provided
+      const calculatedTotal = (Pr !== null && Pr !== undefined ? Number(Pr) : 0) +
+                              (PE !== null && PE !== undefined ? Number(PE) : 0) +
+                              (P !== null && P !== undefined ? Number(P) : 0) +
+                              (R !== null && R !== undefined ? Number(R) : 0) +
+                              (C !== null && C !== undefined ? Number(C) : 0);
+      
+      const finalTotal = T !== null && T !== undefined ? Number(T) : calculatedTotal;
 
       // find existing marks record for this student & lab
       let record = await Marks.findOne({ studentId, labAssignmentId });
+
+      const weekData = {
+        date: entryDate,
+        Pr: Pr !== null && Pr !== undefined ? Number(Pr) : null,
+        PE: PE !== null && PE !== undefined ? Number(PE) : null,
+        P: P !== null && P !== undefined ? Number(P) : null,
+        R: R !== null && R !== undefined ? Number(R) : null,
+        C: C !== null && C !== undefined ? Number(C) : null,
+        T: finalTotal,
+        marks: finalTotal // Keep for backward compatibility
+      };
 
       if (!record) {
         // create new record with first week
         record = new Marks({
           studentId,
           labAssignmentId,
-          weeklyMarks: [{ date: entryDate, marks: obtained }],
+          weeklyMarks: [weekData],
           enteredBy: req.user._id
         });
         await record.save();
@@ -66,11 +95,17 @@ export const enterMarks = async (req, res) => {
         );
 
         if (existingWeek) {
-          // update that week’s marks
-          existingWeek.marks = obtained;
+          // update that week's marks
+          existingWeek.Pr = weekData.Pr;
+          existingWeek.PE = weekData.PE;
+          existingWeek.P = weekData.P;
+          existingWeek.R = weekData.R;
+          existingWeek.C = weekData.C;
+          existingWeek.T = weekData.T;
+          existingWeek.marks = weekData.marks; // Keep for backward compatibility
         } else {
           // push new week
-          record.weeklyMarks.push({ date: entryDate, marks: obtained });
+          record.weeklyMarks.push(weekData);
         }
 
         await record.save();
@@ -110,7 +145,13 @@ export const getMarksHistory = async (req, res) => {
             username: doc.studentId.username
           },
           date: week.date,
-          marks: week.marks
+          marks: week.marks || week.T, // Backward compatibility
+          Pr: week.Pr !== null && week.Pr !== undefined ? week.Pr : null,
+          PE: week.PE !== null && week.PE !== undefined ? week.PE : null,
+          P: week.P !== null && week.P !== undefined ? week.P : null,
+          R: week.R !== null && week.R !== undefined ? week.R : null,
+          C: week.C !== null && week.C !== undefined ? week.C : null,
+          T: week.T !== null && week.T !== undefined ? week.T : (week.marks || null)
         });
       });
     });

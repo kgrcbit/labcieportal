@@ -1,4 +1,5 @@
 name,username,password,role,department,email
+admin,admin,12345,admin,IT,admin@college.edu
 Faculty_A,F001,12345,faculty,IT,faculty1@college.edu
 Faculty_B,F002,12345,faculty,IT,faculty2@college.edu
 Faculty_C,F003,12345,faculty,IT,faculty3@college.edu

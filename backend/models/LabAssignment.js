@@ -15,6 +15,10 @@ const labAssignmentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  batch: {
+    type: String,
+    default: "All"
+  },
   academicYear: {
     type: String, // "2025-26"
     required: true

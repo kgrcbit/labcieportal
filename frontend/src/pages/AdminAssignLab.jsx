@@ -9,6 +9,7 @@ export default function AdminAssignLab(){
   const [selectedLab, setSelectedLab] = useState("");
   const [facultyList, setFacultyList] = useState([]);
   const [section, setSection] = useState("IT-1");
+  const [batch, setBatch] = useState("All");
   const [facultyId, setFacultyId] = useState("");
   const [startDate, setStartDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [endDate, setEndDate] = useState(dayjs().add(6, "month").format("YYYY-MM-DD"));
@@ -85,6 +86,7 @@ export default function AdminAssignLab(){
         labId: selectedLab,
         facultyId,
         section,
+        batch,
         academicYear: `${startDate.slice(0,4)}-${endDate.slice(0,4)}`,
         semesterType: semester % 2 === 1 ? "Odd" : "Even",
         startDate,
@@ -98,6 +100,7 @@ export default function AdminAssignLab(){
       // Reset form
       setSelectedLab("");
       setFacultyId("");
+      setBatch("All");
       setStartDate(dayjs().format("YYYY-MM-DD"));
       setEndDate(dayjs().add(6, "month").format("YYYY-MM-DD"));
       setDayOfWeek("Monday");
@@ -266,6 +269,19 @@ export default function AdminAssignLab(){
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Batch</label>
+                    <select 
+                      value={batch} 
+                      onChange={e => setBatch(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="All">All Batches</option>
+                      <option value="Batch-1">Batch-1</option>
+                      <option value="Batch-2">Batch-2</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Faculty</label>
                     <select 
                       value={facultyId} 
@@ -340,53 +356,55 @@ export default function AdminAssignLab(){
             </div>
 
             {/* Current Assignments */}
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Current Lab Assignments</h2>
+            <div className="bg-white p-4 rounded-sm shadow-sm border border-gray-200">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Current Lab Assignments</h2>
               
               {assignments.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-4 text-xs text-gray-500">
                   No lab assignments found
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 font-medium text-gray-700">Lab</th>
-                        <th className="text-left py-3 font-medium text-gray-700">Faculty</th>
-                        <th className="text-left py-3 font-medium text-gray-700">Section</th>
-                        <th className="text-left py-3 font-medium text-gray-700">Schedule</th>
-                        <th className="text-left py-3 font-medium text-gray-700">Academic Year</th>
-                        <th className="text-left py-3 font-medium text-gray-700">Status</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Lab</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Faculty</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Section</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Batch</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Schedule</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Academic Year</th>
+                        <th className="text-left py-2 px-2 font-medium text-gray-700">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {assignments.map(assignment => (
                         <tr key={assignment._id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-4">
+                          <td className="py-2 px-2">
                             <div>
-                              <div className="font-medium text-gray-900">{assignment.labId?.labName}</div>
-                              <div className="text-sm text-gray-500">{assignment.labId?.labCode}</div>
+                              <div className="font-medium text-gray-900 text-xs">{assignment.labId?.labName}</div>
+                              <div className="text-[10px] text-gray-500">{assignment.labId?.labCode}</div>
                             </div>
                           </td>
-                          <td className="py-4">
+                          <td className="py-2 px-2">
                             <div>
-                              <div className="font-medium text-gray-900">{assignment.facultyId?.name}</div>
-                              <div className="text-sm text-gray-500">{assignment.facultyId?.username}</div>
+                              <div className="font-medium text-gray-900 text-xs">{assignment.facultyId?.name}</div>
+                              <div className="text-[10px] text-gray-500">{assignment.facultyId?.username}</div>
                             </div>
                           </td>
-                          <td className="py-4 text-gray-900">{assignment.section}</td>
-                          <td className="py-4">
+                          <td className="py-2 px-2 text-xs text-gray-900">{assignment.section}</td>
+                          <td className="py-2 px-2 text-xs text-gray-900">{assignment.batch || "All"}</td>
+                          <td className="py-2 px-2">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{assignment.dayOfWeek}</div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs font-medium text-gray-900">{assignment.dayOfWeek}</div>
+                              <div className="text-[10px] text-gray-500">
                                 {dayjs(assignment.startDate).format('MMM DD')} - {dayjs(assignment.endDate).format('MMM DD, YYYY')}
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 text-gray-900">{assignment.academicYear}</td>
-                          <td className="py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          <td className="py-2 px-2 text-xs text-gray-900">{assignment.academicYear}</td>
+                          <td className="py-2 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               assignment.semesterType === 'Odd' 
                                 ? 'bg-blue-100 text-blue-800' 
                                 : 'bg-green-100 text-green-800'
@@ -407,18 +425,62 @@ export default function AdminAssignLab(){
         {/* User Management Tab */}
         {activeTab === "users" && (
           <div className="space-y-8">
-            {/* Add User Button */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
-              <button
-                onClick={() => setShowAddUser(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                <span>Add User</span>
-              </button>
+            {/* Add User Button and Filters */}
+            <div className="bg-white p-4 rounded-sm shadow-sm border border-gray-200 mb-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-sm font-semibold text-gray-900">User Management</h2>
+                <button
+                  onClick={() => setShowAddUser(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-xs rounded-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>Add User</span>
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Filter by Role</label>
+                  <select
+                    value={filterRole}
+                    onChange={e => setFilterRole(e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="student">Student</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Filter by Department</label>
+                  <select
+                    value={filterDepartment}
+                    onChange={e => setFilterDepartment(e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Departments</option>
+                    <option value="IT">IT</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search by name or username..."
+                    value={filterSearch}
+                    onChange={e => setFilterSearch(e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Add User Modal */}
@@ -552,28 +614,36 @@ export default function AdminAssignLab(){
             )}
 
             {/* Users Table */}
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-white p-4 rounded-sm shadow-sm border border-gray-200">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 font-medium text-gray-700">Name</th>
-                      <th className="text-left py-3 font-medium text-gray-700">Username</th>
-                      <th className="text-left py-3 font-medium text-gray-700">Role</th>
-                      <th className="text-left py-3 font-medium text-gray-700">Department</th>
-                      <th className="text-left py-3 font-medium text-gray-700">Details</th>
-                      <th className="text-left py-3 font-medium text-gray-700">Actions</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Name</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Username</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Role</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Department</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Details</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map(user => (
+                    {users
+                      .filter(user => {
+                        if (filterRole !== "all" && user.role !== filterRole) return false;
+                        if (filterDepartment !== "all" && user.department !== filterDepartment) return false;
+                        if (filterSearch && !user.name.toLowerCase().includes(filterSearch.toLowerCase()) && 
+                            !user.username.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+                        return true;
+                      })
+                      .map(user => (
                       <tr key={user._id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4">
-                          <div className="font-medium text-gray-900">{user.name}</div>
+                        <td className="py-2 px-2">
+                          <div className="font-medium text-gray-900 text-xs">{user.name}</div>
                         </td>
-                        <td className="py-4 text-gray-900">{user.username}</td>
-                        <td className="py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                        <td className="py-2 px-2 text-xs text-gray-900">{user.username}</td>
+                        <td className="py-2 px-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${
                             user.role === 'admin' 
                               ? 'bg-purple-100 text-purple-800'
                               : user.role === 'faculty'
@@ -583,17 +653,17 @@ export default function AdminAssignLab(){
                             {user.role}
                           </span>
                         </td>
-                        <td className="py-4 text-gray-900">{user.department}</td>
-                        <td className="py-4 text-sm text-gray-500">
-                          {user.role === 'student' ? `Sem ${user.semester} - ${user.section}` : 'Faculty Member'}
+                        <td className="py-2 px-2 text-xs text-gray-900">{user.department}</td>
+                        <td className="py-2 px-2 text-[10px] text-gray-500">
+                          {user.role === 'student' ? `Sem ${user.semester} - ${user.section}${user.batch ? ` (${user.batch})` : ''}` : 'Faculty Member'}
                         </td>
-                        <td className="py-4">
+                        <td className="py-2 px-2">
                           <button
                             onClick={() => deleteUser(user._id)}
-                            className="text-red-600 hover:text-red-800 transition-colors duration-200 p-2 rounded hover:bg-red-50"
+                            className="text-red-600 hover:text-red-800 transition-colors duration-200 p-1 rounded hover:bg-red-50"
                             title="Delete User"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -604,8 +674,14 @@ export default function AdminAssignLab(){
                 </table>
               </div>
 
-              {users.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+              {users.filter(user => {
+                if (filterRole !== "all" && user.role !== filterRole) return false;
+                if (filterDepartment !== "all" && user.department !== filterDepartment) return false;
+                if (filterSearch && !user.name.toLowerCase().includes(filterSearch.toLowerCase()) && 
+                    !user.username.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+                return true;
+              }).length === 0 && (
+                <div className="text-center py-4 text-xs text-gray-500">
                   No users found
                 </div>
               )}
