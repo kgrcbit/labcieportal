@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import API from "../api/api";
 import dayjs from "dayjs";
+import { useReactToPrint } from "react-to-print";
 
 export default function StudentDashboard(){
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedLabId, setSelectedLabId] = useState("");
+  const printRef = useRef();
+  const handlePrint = useReactToPrint({ content: () => printRef.current, documentTitle: "Lab_Marks_Report" });
 
   useEffect(() => {
     fetchMarks();
@@ -55,191 +59,87 @@ export default function StudentDashboard(){
     );
   }
 
-  const calculateAverage = (sessions) => {
-    if (!sessions || sessions.length === 0) return { CIE1: 0, CIE2: 0, CIE3: 0 };
-    
-    const totals = sessions.reduce((acc, session) => {
-      if (session.marks) {
-        acc.CIE1 += session.marks.CIE1 || 0;
-        acc.CIE2 += session.marks.CIE2 || 0;
-        acc.CIE3 += session.marks.CIE3 || 0;
-        acc.count += 1;
-      }
-      return acc;
-    }, { CIE1: 0, CIE2: 0, CIE3: 0, count: 0 });
-
-    if (totals.count === 0) return { CIE1: 0, CIE2: 0, CIE3: 0 };
-
-    return {
-      CIE1: Math.round(totals.CIE1 / totals.count),
-      CIE2: Math.round(totals.CIE2 / totals.count),
-      CIE3: Math.round(totals.CIE3 / totals.count)
-    };
-  };
+  const labs = data?.labs || [];
+  const selectedLab = labs.find(l => (l.labId || "") === selectedLabId);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">My Lab Marks</h1>
-          <p className="mt-2 text-gray-600">View your Continuous Internal Evaluation marks for all assigned labs</p>
-        </div>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Lab Marks</h1>
 
-        {/* No Data State */}
-        {(!data || !data.labs || data.labs.length === 0) && (
-          <div className="card p-8 text-center">
-            <div className="text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No Lab Assignments</h3>
-              <p className="mt-1 text-sm text-gray-500">You haven't been assigned to any labs yet.</p>
+      {/* No labs */}
+      {labs.length === 0 && (
+        <div className="text-center text-gray-600">No lab assignments found.</div>
+      )}
+
+      {/* Lab Filter */}
+      {labs.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Lab</label>
+          <select
+            value={selectedLabId}
+            onChange={(e) => setSelectedLabId(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">-- Choose a lab --</option>
+            {labs.map((l, idx) => (
+              <option key={l.labId || idx} value={l.labId || ""}>
+                {l.labName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Selected Lab Report */}
+      {selectedLab && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          {/* Actions */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-xl font-semibold text-gray-900">{selectedLab.labName}</div>
+              <div className="text-sm text-gray-600">Faculty: {selectedLab.faculty || "TBD"}</div>
+            </div>
+            <button
+              onClick={handlePrint}
+              className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              Download Report
+            </button>
+          </div>
+
+          {/* Printable content */}
+          <div ref={printRef}>
+            {/* Print header */}
+            <div className="hidden print:block mb-4">
+              <h2 className="text-xl font-bold text-center">Lab Marks Report</h2>
+              <p className="text-center text-sm">{selectedLab.labName} • Faculty: {selectedLab.faculty || "TBD"}</p>
+            </div>
+
+            {/* Marks Table - Minimal */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 font-medium text-gray-700">Week</th>
+                    <th className="text-left py-3 font-medium text-gray-700">Date</th>
+                    <th className="text-left py-3 font-medium text-gray-700">CIE Marks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedLab.sessions?.map((s, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-3 text-gray-900">Week {i + 1}</td>
+                      <td className="py-3 text-gray-900">{dayjs(s.date).format("DD MMM YYYY")}</td>
+                      <td className="py-3 text-gray-900">{s.marks ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
-
-        {/* Lab Marks Cards */}
-        <div className="space-y-6">
-          {data?.labs?.map((lab, index) => {
-            const average = calculateAverage(lab.sessions);
-            const totalSessions = lab.sessions?.length || 0;
-            const completedSessions = lab.sessions?.filter(s => s.marks && (s.marks.CIE1 || s.marks.CIE2 || s.marks.CIE3)).length || 0;
-
-            return (
-              <div key={lab.labId || index} className="card p-8 fade-in">
-                {/* Lab Header */}
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{lab.labName}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {lab.dayOfWeek} • Faculty: {lab.faculty || "TBD"}
-                    </p>
-                  </div>
-                  
-                  {/* Progress Indicator */}
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Progress</div>
-                    <div className="text-lg font-semibold text-blue-600">
-                      {completedSessions}/{totalSessions} sessions
-                    </div>
-                    <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Average Marks Summary */}
-                {completedSessions > 0 && (
-                  <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                    <h3 className="text-sm font-medium text-blue-900 mb-3">Average Marks</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{average.CIE1}</div>
-                        <div className="text-xs text-blue-700">CIE1</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{average.CIE2}</div>
-                        <div className="text-xs text-blue-700">CIE2</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{average.CIE3}</div>
-                        <div className="text-xs text-blue-700">CIE3</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Marks Table */}
-                <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Week</th>
-                        <th>Date</th>
-                        <th>CIE1</th>
-                        <th>CIE2</th>
-                        <th>CIE3</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lab.sessions?.map((session, sessionIndex) => {
-                        const hasMarks = session.marks && (session.marks.CIE1 || session.marks.CIE2 || session.marks.CIE3);
-                        return (
-                          <tr key={sessionIndex}>
-                            <td className="font-medium">Week {sessionIndex + 1}</td>
-                            <td>{dayjs(session.date || session).format("DD MMM YYYY")}</td>
-                            <td className="text-center">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                session.marks?.CIE1 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                {session.marks?.CIE1 ?? "-"}
-                              </span>
-                            </td>
-                            <td className="text-center">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                session.marks?.CIE2 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                {session.marks?.CIE2 ?? "-"}
-                              </span>
-                            </td>
-                            <td className="text-center">
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                session.marks?.CIE3 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                {session.marks?.CIE3 ?? "-"}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                hasMarks 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {hasMarks ? 'Completed' : 'Pending'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Lab Summary */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900">{totalSessions}</div>
-                      <div className="text-sm text-gray-500">Total Sessions</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-green-600">{completedSessions}</div>
-                      <div className="text-sm text-gray-500">Completed</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-blue-600">
-                        {totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0}%
-                      </div>
-                      <div className="text-sm text-gray-500">Completion</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

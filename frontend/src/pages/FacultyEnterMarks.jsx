@@ -75,6 +75,7 @@ export default function FacultyEnterMarks(){
   const fetchMarksHistory = async () => {
     try {
       const res = await API.get(`/faculty/labs/${selected}/marks`);
+      console.log("Marks history response:", res.data.marks);
       setMarksHistory(res.data.marks || []);
     } catch (err) {
       console.error("Error fetching marks history:", err);
@@ -126,19 +127,30 @@ export default function FacultyEnterMarks(){
     if (!selected) return [];
     
     const assignment = assignments.find(a => a._id === selected);
-    if (!assignment || !assignment.generatedDates) return [];
+    console.log("Selected assignment:", assignment);
     
-    return assignment.generatedDates.map((date, index) => ({
+    if (!assignment || !assignment.generatedDates) {
+      console.log("No assignment or generatedDates found");
+      return [];
+    }
+    
+    const weekDates = assignment.generatedDates.map((date, index) => ({
       weekNumber: index + 1,
       date: dayjs(date).format('YYYY-MM-DD'),
       displayDate: dayjs(date).format('MMM DD, YYYY')
     }));
+    
+    console.log("Generated week dates:", weekDates);
+    return weekDates;
   };
 
   // Group marks by week for grid display
   const getMarksByWeek = () => {
     const weeks = {};
     const labWeekDates = getLabWeekDates();
+    
+    console.log("Lab week dates:", labWeekDates);
+    console.log("Marks history:", marksHistory);
     
     // Initialize all weeks from lab schedule
     labWeekDates.forEach(week => {
@@ -153,11 +165,15 @@ export default function FacultyEnterMarks(){
     // Populate with existing marks
     marksHistory.forEach(mark => {
       const weekDate = dayjs(mark.date).format('YYYY-MM-DD');
+      console.log(`Processing mark for date ${weekDate}, student ${mark.studentId}, marks ${mark.marks}`);
       if (weeks[weekDate]) {
         weeks[weekDate].students[mark.studentId] = mark.marks;
+      } else {
+        console.log(`Week date ${weekDate} not found in lab schedule`);
       }
     });
     
+    console.log("Final weeks object:", weeks);
     return weeks;
   };
 

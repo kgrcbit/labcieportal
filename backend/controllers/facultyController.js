@@ -41,45 +41,84 @@ export const getStudentsByLab = async (req, res) => {
 // Enter marks for students
 export const enterMarks = async (req, res) => {
   try {
-    const { labAssignmentId, date, marks } = req.body; // marks is array of {studentId, marks}
-    
-    const assignment = await LabAssignment.findById(labAssignmentId);
-    if (!assignment) {
-      return res.status(404).json({ message: "Lab assignment not found" });
+    const { labAssignmentId, date, marks } = req.body; // marks = [{ studentId, marks }]
+    const entryDate = new Date(date);
+
+    for (const mark of marks) {
+      const { studentId, marks: obtained } = mark;
+
+      // find existing marks record for this student & lab
+      let record = await Marks.findOne({ studentId, labAssignmentId });
+
+      if (!record) {
+        // create new record with first week
+        record = new Marks({
+          studentId,
+          labAssignmentId,
+          weeklyMarks: [{ date: entryDate, marks: obtained }],
+          enteredBy: req.user._id
+        });
+        await record.save();
+      } else {
+        // check if week already exists
+        const existingWeek = record.weeklyMarks.find(w => 
+          w.date.toISOString().slice(0,10) === entryDate.toISOString().slice(0,10)
+        );
+
+        if (existingWeek) {
+          // update that week’s marks
+          existingWeek.marks = obtained;
+        } else {
+          // push new week
+          record.weeklyMarks.push({ date: entryDate, marks: obtained });
+        }
+
+        await record.save();
+      }
     }
 
-    // First, delete existing marks for this lab assignment and date to avoid duplicates
- 
-    // Create marks records for each student
-    const marksRecords = marks.map(mark => ({
-      studentId: mark.studentId,
-      labAssignmentId,
-      date: new Date(date),
-      marks: mark.marks || null,
-      enteredBy: req.user._id
-    }));
-    
-    const createdMarks = await Marks.insertMany(marksRecords);
-    res.status(201).json({
-      message: "Marks entered successfully",
-      marks: createdMarks
-    });
+    res.status(200).json({ message: "Marks updated successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
+
+// Get marks history for a lab
 // Get marks history for a lab
 export const getMarksHistory = async (req, res) => {
   try {
-    const { labAssignmentId } = req.params;
-    
-    const marks = await Marks.find({ labAssignmentId })
+    // Route is defined as /labs/:labId/marks where :labId is the LabAssignment _id
+    const { labId } = req.params;
+    const labAssignmentId = labId;
+
+    // Fetch all student-lab mark documents
+    const marksDocs = await Marks.find({ labAssignmentId })
       .populate("studentId", "name username")
-      .sort({ date: 1 }); // Sort by date ascending for proper week order
-    
-    res.json({ marks });
+      .lean();
+
+    // Flatten weeklyMarks array into individual records
+    const flattened = [];
+
+    marksDocs.forEach(doc => {
+      doc.weeklyMarks.forEach(week => {
+        flattened.push({
+          studentId: doc.studentId._id,
+          student: {
+            name: doc.studentId.name,
+            username: doc.studentId.username
+          },
+          date: week.date,
+          marks: week.marks
+        });
+      });
+    });
+
+    // Sort by date ascending
+    flattened.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    res.json({ marks: flattened });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error", error: error.message });

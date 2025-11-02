@@ -3,11 +3,13 @@ import mongoose from "mongoose";
 const marksSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   labAssignmentId: { type: mongoose.Schema.Types.ObjectId, ref: "LabAssignment" },
-  date: Date,  // This represents the specific week/lab session date
-  marks: Number,  // Single marks value for that week
+  weeklyMarks: [
+    {
+      date: Date,
+      marks: { type: Number, default: null }
+    }
+  ],
   enteredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 export default mongoose.model("Marks", marksSchema);
