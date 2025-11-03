@@ -16,14 +16,21 @@ export const getStudentMarks = async (req, res) => {
       })
       .populate("enteredBy", "name");
     
-    // Group marks by lab
+    // Group marks by lab (defensive against missing or legacy data)
     const groupedMarks = {};
     marks.forEach(mark => {
-      const labId = mark.labAssignmentId.labId._id;
-      const labName = mark.labAssignmentId.labId.labName;
-      const facultyName = mark.labAssignmentId.facultyId?.name || "TBD";
-      const dayOfWeek = mark.labAssignmentId.dayOfWeek || "TBD";
-      
+      const assignment = mark?.labAssignmentId;
+      const lab = assignment?.labId;
+      if (!assignment || !lab) {
+        // Skip records with missing assignment/lab linkage
+        return;
+      }
+
+      const labId = String(lab._id || lab);
+      const labName = lab.labName || "Unknown Lab";
+      const facultyName = assignment.facultyId?.name || "TBD";
+      const dayOfWeek = assignment.dayOfWeek || "TBD";
+
       if (!groupedMarks[labId]) {
         groupedMarks[labId] = {
           labId: labId,
@@ -33,12 +40,13 @@ export const getStudentMarks = async (req, res) => {
           sessions: []
         };
       }
-      
-      // Process weeklyMarks array
-      mark.weeklyMarks.forEach(weeklyMark => {
+
+      const weekly = Array.isArray(mark.weeklyMarks) ? mark.weeklyMarks : [];
+      weekly.forEach(weeklyMark => {
         groupedMarks[labId].sessions.push({
           date: weeklyMark.date,
-          marks: weeklyMark.marks,
+          // prefer T if present, else marks (backward compat)
+          marks: weeklyMark.T !== null && weeklyMark.T !== undefined ? weeklyMark.T : weeklyMark.marks,
           enteredBy: mark.enteredBy ? mark.enteredBy.name : "Unknown"
         });
       });

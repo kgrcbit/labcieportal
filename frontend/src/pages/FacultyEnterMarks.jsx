@@ -24,21 +24,17 @@ export default function FacultyEnterMarks(){
   const printRef = useRef();
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    // Prefer new API to avoid warning: pass contentRef instead of content()
+    contentRef: printRef,
     documentTitle: `Lab_Marks_Overview_${selected}_${dayjs().format('YYYY-MM-DD')}`,
     onBeforeGetContent: async () => {
-      // 2. We use onBeforeGetContent to force the element visibility
-      // before the print dialog opens. Since the element is always mounted (see JSX fix below), 
-      // printRef.current will be an object here.
       if (!showMarksOverview) {
         setShowMarksOverview(true);
-        // A slight delay ensures React has finished setting the visibility CSS for print
-        await new Promise(resolve => setTimeout(resolve, 200)); 
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     },
     onPrintError: (error) => {
       console.error('Print error:', error);
-      // Optional: Set a user-facing message on print error
       setMsg({ type: "error", text: "Failed to initialize print dialog. Check console for details." });
     },
   });
@@ -423,13 +419,13 @@ export default function FacultyEnterMarks(){
             </div>
 
             {/* Static legend beside submit button */}
-            <div className="hidden sm:block text-[11px] leading-tight text-gray-3000">
+            <div className="hidden sm:block text-[10px] leading-tight text-gray-3000">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div><span className="font-semibold">Pr</span>: Preparation</div>
-                <div><span className="font-semibold">PE</span>: Program Execution</div>
-                <div><span className="font-semibold">P</span>: Post Viva</div>
-                <div><span className="font-semibold">R</span>: Record</div>
-                <div><span className="font-semibold">C</span>: Conduct</div>
+                <div><span className="font-semibold">Pr</span>: Preparation(5M)</div>
+                <div><span className="font-semibold">PE</span>: Program Execution(10M)</div>
+                <div><span className="font-semibold">P</span>: Post Viva(5M)</div>
+                <div><span className="font-semibold">R</span>: Record(5M)</div>
+                <div><span className="font-semibold">C</span>: Conduct(5M)</div>
               </div>
             </div>
           </div>
@@ -590,10 +586,10 @@ export default function FacultyEnterMarks(){
         {/* --- MARKS OVERVIEW SECTION --- */}
         {/* FIX: Only check for 'selected' to MOUNT the container, ensuring printRef is always set if a lab is loaded. */}
         {selected && (
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+          <div className="bg-white p-8 shadow-sm border border-gray-200">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Lab Marks Overview</h2>
+                <h2 className="text-xl font-semibold text-gray-3000">Lab Marks Overview</h2>
                 <p className="text-gray-600 mt-1">View all weeks marks for students</p>
               </div>
               <div className="flex items-center space-x-3">

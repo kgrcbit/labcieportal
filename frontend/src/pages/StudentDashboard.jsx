@@ -13,7 +13,7 @@ export default function StudentDashboard(){
   const [passwordMsg, setPasswordMsg] = useState(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const printRef = useRef();
-  const handlePrint = useReactToPrint({ content: () => printRef.current, documentTitle: "Lab_Marks_Report" });
+  const handlePrint = useReactToPrint({ contentRef: printRef, documentTitle: "Lab_Marks_Report" });
 
   useEffect(() => {
     fetchMarks();
@@ -23,7 +23,13 @@ export default function StudentDashboard(){
     try {
       setLoading(true);
       const res = await API.get("/student/me/marks");
-      setData(res.data);
+      const payload = res.data || {};
+      const labs = Array.isArray(payload.labs) ? payload.labs : [];
+      setData({ labs });
+      if (!selectedLabId && labs.length > 0) {
+        const firstLabId = labs[0]?.labId || "";
+        if (firstLabId) setSelectedLabId(firstLabId);
+      }
     } catch (err) {
       console.error("Error fetching marks:", err);
       setError("Failed to load marks");
