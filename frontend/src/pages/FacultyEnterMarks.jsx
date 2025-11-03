@@ -649,76 +649,63 @@ export default function FacultyEnterMarks(){
                       </div>
                     </div>
 
-                    {/* Two-column layout for better visibility */}
-                    <div className="flex gap-4 print:flex-row">
-                      {(() => {
-                        // Split students into two columns
-                        const midPoint = Math.ceil(students.length / 2);
-                        const column1Students = students.slice(0, midPoint);
-                        const column2Students = students.slice(midPoint);
-                        
-                        return [column1Students, column2Students].map((columnStudents, colIndex) => (
-                          <div key={colIndex} className="flex-1 min-w-0">
-                            <table className="w-full text-xs print:text-xs">
-                              <thead>
-                                <tr className="border-b-2 border-gray-300 print:border-gray-600">
-                                  <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16 print:text-xs">Roll</th>
-                                  <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32 print:text-xs">Name</th>
-                                  {weekDates.map(weekDate => {
-                                    const weekData = marksByWeek[weekDate];
-                                    return (
-                                      <th 
-                                        key={weekDate} 
-                                        className="text-center py-2 px-1 font-semibold text-gray-700 w-16 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default print:text-xs"
-                                        onClick={() => handleEditWeek(weekDate)}
-                                        title={`Click to edit Week ${weekData.weekNumber} marks`}
-                                      >
-                                        <div>
-                                          <div className="font-medium text-xs">W{weekData.weekNumber}</div>
-                                          <div className="text-gray-500 text-[10px] print:text-[8px]">{weekData.displayDate}</div>
-                                        </div>
-                                      </th>
-                                    );
-                                  })}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {columnStudents.map(student => (
-                                  <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50 print:border-gray-300">
-                                    <td className="py-2 px-2 font-medium text-gray-900 print:text-xs">{student.username}</td>
-                                    <td className="py-2 px-2 text-gray-900 print:text-xs">{student.name}</td>
-                                    {weekDates.map(weekDate => {
-                                      const weekData = marksByWeek[weekDate];
-                                      const studentMarks = weekData.students[student._id];
-                                      const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
-                                      
-                                      return (
-                                        <td 
-                                          key={weekDate} 
-                                          className="text-center py-2 px-1 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default"
-                                          onClick={() => handleEditWeek(weekDate)}
-                                        >
-                                          <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold print:border print:border-gray-400 ${
-                                            total !== null && total !== undefined && total !== ''
-                                              ? 'bg-green-100 text-green-800 print:bg-white print:text-gray-900'
-                                              : 'bg-gray-100 text-gray-500 print:bg-white print:text-gray-500'
-                                          }`}>
-                                            {total !== null && total !== undefined && total !== '' 
-                                              ? total 
-                                              : '-'
-                                            }
-                                          </span>
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ));
-                      })()}
-                    </div>
+                    {/* Single-column layout showing all weeks marks for students */}
+                    <table className="w-full text-xs print:text-xs">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300 print:border-gray-600">
+                          <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16 print:text-xs">Roll</th>
+                          <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32 print:text-xs">Name</th>
+                          {weekDates.map(weekDate => {
+                            const weekData = marksByWeek[weekDate];
+                            return (
+                              <th 
+                                key={weekDate} 
+                                className="text-center py-2 px-1 font-semibold text-gray-700 w-16 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default print:text-xs"
+                                onClick={() => handleEditWeek(weekDate)}
+                                title={`Click to edit Week ${weekData.weekNumber} marks`}
+                              >
+                                <div>
+                                  <div className="font-medium text-xs">W{weekData.weekNumber}</div>
+                                  <div className="text-gray-500 text-[10px] print:text-[8px]">{weekData.displayDate}</div>
+                                </div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {students.map(student => (
+                          <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50 print:border-gray-300">
+                            <td className="py-2 px-2 font-medium text-gray-900 print:text-xs">{student.username}</td>
+                            <td className="py-2 px-2 text-gray-900 print:text-xs">{student.name}</td>
+                            {weekDates.map(weekDate => {
+                              const weekData = marksByWeek[weekDate];
+                              const studentMarks = weekData.students[student._id];
+                              const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
+                              
+                              return (
+                                <td 
+                                  key={weekDate} 
+                                  className="text-center py-2 px-1 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default"
+                                  onClick={() => handleEditWeek(weekDate)}
+                                >
+                                  <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold print:border print:border-gray-400 ${
+                                    total !== null && total !== undefined && total !== ''
+                                      ? 'bg-green-100 text-green-800 print:bg-white print:text-gray-900'
+                                      : 'bg-gray-100 text-gray-500 print:bg-white print:text-gray-500'
+                                  }`}>
+                                    {total !== null && total !== undefined && total !== '' 
+                                      ? total 
+                                      : '-'
+                                    }
+                                  </span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </>
                 ) : (
                   // Display a message if no data is available, only visible outside of print mode
