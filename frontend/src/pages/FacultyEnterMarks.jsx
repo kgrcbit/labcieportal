@@ -17,12 +17,30 @@ export default function FacultyEnterMarks(){
   const [editMarks, setEditMarks] = useState({});
   const [batch, setBatch] = useState("All");
   const [showMarksOverview, setShowMarksOverview] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPerPage] = useState(37); // Show 37 students per page for "All batches"
 
+  // 1. REF IS CREATED
   const printRef = useRef();
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     documentTitle: `Lab_Marks_Overview_${selected}_${dayjs().format('YYYY-MM-DD')}`,
+    onBeforeGetContent: async () => {
+      // 2. We use onBeforeGetContent to force the element visibility
+      // before the print dialog opens. Since the element is always mounted (see JSX fix below), 
+      // printRef.current will be an object here.
+      if (!showMarksOverview) {
+        setShowMarksOverview(true);
+        // A slight delay ensures React has finished setting the visibility CSS for print
+        await new Promise(resolve => setTimeout(resolve, 200)); 
+      }
+    },
+    onPrintError: (error) => {
+      console.error('Print error:', error);
+      // Optional: Set a user-facing message on print error
+      setMsg({ type: "error", text: "Failed to initialize print dialog. Check console for details." });
+    },
   });
 
   useEffect(() => {
@@ -43,6 +61,7 @@ export default function FacultyEnterMarks(){
   useEffect(() => {
     if (selected && batch) {
       fetchStudents();
+      setCurrentPage(1); // Reset to first page when batch changes
     }
   }, [batch]);
 
@@ -315,21 +334,33 @@ export default function FacultyEnterMarks(){
     return assignments.find(a => a._id === selected);
   };
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-8">
+  // Pagination logic for "All batches"
+  const getPaginatedStudents = () => {
+    if (batch !== "All") {
+      return students; // No pagination for specific batches
+    }
+    
+    const startIndex = (currentPage - 1) * studentsPerPage;
+    const endIndex = startIndex + studentsPerPage;
+    return students.slice(startIndex, endIndex);
+  };
 
-        {/* Lab Selection and Date */}
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Select Lab and Session</h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+  const totalPages = batch === "All" ? Math.ceil(students.length / studentsPerPage) : 1;
+  const paginatedStudents = getPaginatedStudents();
+
+  return (
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-5 py-1">
+      <div className="space-y-1.5">
+
+        {/* Lab Selection and Date - Minimized */}
+        <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-1.5 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Lab</label>
+              <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Assigned Lab</label>
               <select 
                 value={selected || ""} 
                 onChange={e => setSelected(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">-- Select lab --</option>
                 {assignments.map(a => (
@@ -342,11 +373,11 @@ export default function FacultyEnterMarks(){
 
             {selected && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Batch</label>
+                <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Batch</label>
                 <select 
                   value={batch} 
                   onChange={e => setBatch(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="All">All Batches</option>
                   <option value="Batch-1">Batch-1</option>
@@ -356,11 +387,11 @@ export default function FacultyEnterMarks(){
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Session Date</label>
+              <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Session Date</label>
               <select 
                 value={date} 
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">-- Select session --</option>
                 {getLabWeekDates().map(week => (
@@ -370,30 +401,41 @@ export default function FacultyEnterMarks(){
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="flex items-end">
-            <button 
-              onClick={submit} 
-              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading || !selected || students.length === 0}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Submitting...
-                </div>
-              ) : (
-                "Submit Marks"
-              )}
-            </button>
+            <div className="flex gap-1.5 items-end">
+              <button 
+                onClick={submit} 
+                className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-xs font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || !selected || students.length === 0}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-1.5 h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-xs">Submitting...</span>
+                  </div>
+                ) : (
+                  "Submit Marks"
+                )}
+              </button>
+            </div>
+
+            {/* Static legend beside submit button */}
+            <div className="hidden sm:block text-[11px] leading-tight text-gray-3000">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div><span className="font-semibold">Pr</span>: Preparation</div>
+                <div><span className="font-semibold">PE</span>: Program Execution</div>
+                <div><span className="font-semibold">P</span>: Post Viva</div>
+                <div><span className="font-semibold">R</span>: Record</div>
+                <div><span className="font-semibold">C</span>: Conduct</div>
+              </div>
+            </div>
           </div>
 
           {msg && (
-            <div className={`mt-4 p-4 rounded-md ${
+            <div className={`mt-1 p-1.5 rounded text-[10px] ${
               msg.type === "success" 
                 ? "bg-green-50 text-green-800 border border-green-200" 
                 : "bg-red-50 text-red-800 border border-red-200"
@@ -403,128 +445,151 @@ export default function FacultyEnterMarks(){
           )}
         </div>
 
-        {/* Current Session Marks Entry */}
+        {/* Current Session Marks Entry - Ultra-compact for single screen fit */}
         {students.length > 0 && (
-          <div className="bg-white p-2 rounded-sm shadow-sm border border-gray-200">
-            <h2 className="text-xs font-semibold text-gray-900 mb-2">Enter Marks for {getLabWeekDates().find(w => w.date === date)?.displayDate || date}</h2>
+          <div className="bg-white p-1 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex justify-between items-center mb-0.5">
+              <h2 className="text-[9px] font-semibold text-gray-900">
+                Enter Marks for {getLabWeekDates().find(w => w.date === date)?.displayDate || date}
+              </h2>
+              {batch === "All" && totalPages > 1 && (
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-1.5 py-0.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px]"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-gray-600">
+                    {currentPage}/{totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-1.5 py-0.5 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-[10px]"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
             
-            {/* Multi-Column Layout - Students displayed side by side */}
+            {/* Ultra-compact two-column layout - improves visibility */}
             <div className="overflow-x-auto">
-              <div className="inline-flex gap-2">
-                {/* Calculate how many columns can fit (2-3 columns typically) */}
+              <div className="flex gap-3">
                 {(() => {
-                  const studentsPerColumn = Math.ceil(students.length / 2);
-                  const columns = [];
-                  
-                  for (let col = 0; col < 2; col++) {
-                    const columnStudents = students.slice(col * studentsPerColumn, (col + 1) * studentsPerColumn);
-                    
-                    columns.push(
-                      <div key={col} className="flex-shrink-0">
-                        <table className="text-[10px] border-r border-gray-300 pr-2">
-                          <thead className="sticky top-0 bg-white z-10">
-                            <tr className="border-b-2 border-gray-400">
-                              <th className="text-left py-1 px-0.5 font-semibold text-gray-700 w-[50px]">Roll</th>
-                              <th className="text-left py-1 px-0.5 font-semibold text-gray-700 w-[60px]">Name</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[35px]" title="Preparation (5 marks)">Pr</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[35px]" title="Program Execution (5 marks)">PE</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[35px]" title="Viva/Questions (10 marks)">P</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[35px]" title="Record/Notes (5 marks)">R</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[35px]" title="Regularity/Copy (5 marks)">C</th>
-                              <th className="text-center py-1 px-0 font-semibold text-gray-700 w-[38px] bg-blue-100" title="Total (30 marks)">T</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {columnStudents.map(student => {
-                              const studentMarks = marksMap[student._id] || { Pr: "", PE: "", P: "", R: "", C: "", T: "" };
-                              return (
-                                <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50">
-                                  <td className="py-0.5 px-0.5 text-[10px] font-medium text-gray-900">{student.username}</td>
-                                  <td className="py-0.5 px-0.5 text-[10px] text-gray-900 truncate max-w-[60px]" title={student.name}>{student.name}</td>
-                                  <td className="py-0.5 px-0">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="5"
-                                      value={studentMarks.Pr || ""} 
-                                      onChange={e => handleChange(student._id, "Pr", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-gray-300 rounded text-center text-[10px] h-5"
-                                      placeholder="0"
-                                    />
-                                  </td>
-                                  <td className="py-0.5 px-0">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="5"
-                                      value={studentMarks.PE || ""} 
-                                      onChange={e => handleChange(student._id, "PE", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-gray-300 rounded text-center text-[10px] h-5"
-                                      placeholder="0"
-                                    />
-                                  </td>
-                                  <td className="py-0.5 px-0">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="10"
-                                      value={studentMarks.P || ""} 
-                                      onChange={e => handleChange(student._id, "P", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-gray-300 rounded text-center text-[10px] h-5"
-                                      placeholder="0"
-                                    />
-                                  </td>
-                                  <td className="py-0.5 px-0">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="5"
-                                      value={studentMarks.R || ""} 
-                                      onChange={e => handleChange(student._id, "R", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-gray-300 rounded text-center text-[10px] h-5"
-                                      placeholder="0"
-                                    />
-                                  </td>
-                                  <td className="py-0.5 px-0">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="5"
-                                      value={studentMarks.C || ""} 
-                                      onChange={e => handleChange(student._id, "C", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-gray-300 rounded text-center text-[10px] h-5"
-                                      placeholder="0"
-                                    />
-                                  </td>
-                                  <td className="py-0.5 px-0 bg-blue-50">
-                                    <input 
-                                      type="number"
-                                      min="0"
-                                      max="30"
-                                      value={studentMarks.T || ""} 
-                                      onChange={e => handleChange(student._id, "T", e.target.value)}
-                                      className="w-full px-0.5 py-0.5 border border-blue-300 rounded text-center text-[10px] font-semibold h-5"
-                                      placeholder="0"
-                                      readOnly
-                                    />
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  }
-                  return columns;
+                  const midPoint = Math.ceil(paginatedStudents.length / 2);
+                  const columns = [
+                    paginatedStudents.slice(0, midPoint),
+                    paginatedStudents.slice(midPoint)
+                  ];
+
+                  return columns.map((columnStudents, colIdx) => (
+                    <div key={colIdx} className="flex-1 min-w-0">
+                      <table className="w-full text-[10px] border-collapse">
+                        <thead className="sticky top-0 bg-white z-10">
+                          <tr className="border-b border-gray-400">
+                            <th className="text-left py-0.5 px-0.5 font-semibold text-gray-700 w-[32px] sticky left-0 bg-white z-20">Roll</th>
+                            <th className="text-left py-0.5 px-0.5 font-semibold text-gray-700 w-[85px] sticky left-[32px] bg-white z-20">Name</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[22px]" title="Preparation (5 marks)">Pr</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[22px]" title="Program Execution (5 marks)">PE</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[22px]" title="Viva/Questions (10 marks)">P</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[22px]" title="Record/Notes (5 marks)">R</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[22px]" title="Regularity/Copy (5 marks)">C</th>
+                            <th className="text-center py-0.5 px-0 font-semibold text-gray-700 w-[24px] bg-blue-100" title="Total (30 marks)">T</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {columnStudents.map(student => {
+                            const studentMarks = marksMap[student._id] || { Pr: "", PE: "", P: "", R: "", C: "", T: "" };
+                            return (
+                              <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="py-0 px-0.5 text-[12px] font-medium text-gray-900 sticky left-0 bg-white z-10">{student.username}</td>
+                                <td className="py-0 px-0.5 text-[12px] text-gray-900 truncate sticky left-[32px] bg-white z-10 max-w-[85px]" title={student.name}>{student.name}</td>
+                                <td className="py-0 px-0">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={studentMarks.Pr || ""} 
+                                    onChange={e => handleChange(student._id, "Pr", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-gray-300 rounded text-center text-[7px] h-[16px] leading-none"
+                                    placeholder="0"
+                                  />
+                                </td>
+                                <td className="py-0 px-0">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={studentMarks.PE || ""} 
+                                    onChange={e => handleChange(student._id, "PE", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-gray-300 rounded text-center text-[7px] h-[16px] leading-none"
+                                    placeholder="0"
+                                  />
+                                </td>
+                                <td className="py-0 px-0">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="10"
+                                    value={studentMarks.P || ""} 
+                                    onChange={e => handleChange(student._id, "P", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-gray-300 rounded text-center text-[7px] h-[16px] leading-none"
+                                    placeholder="0"
+                                  />
+                                </td>
+                                <td className="py-0 px-0">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={studentMarks.R || ""} 
+                                    onChange={e => handleChange(student._id, "R", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-gray-300 rounded text-center text-[7px] h-[16px] leading-none"
+                                    placeholder="0"
+                                  />
+                                </td>
+                                <td className="py-0 px-0">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={studentMarks.C || ""} 
+                                    onChange={e => handleChange(student._id, "C", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-gray-300 rounded text-center text-[7px] h-[16px] leading-none"
+                                    placeholder="0"
+                                  />
+                                </td>
+                                <td className="py-0 px-0 bg-blue-50">
+                                  <input 
+                                    type="number"
+                                    min="0"
+                                    max="30"
+                                    value={studentMarks.T || ""} 
+                                    onChange={e => handleChange(student._id, "T", e.target.value)}
+                                    className="w-full px-0.5 py-0 border border-blue-300 rounded text-center text-[7px] font-semibold h-[16px] leading-none"
+                                    placeholder="0"
+                                    readOnly
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ));
                 })()}
               </div>
             </div>
           </div>
         )}
 
-        {/* Marks Overview Section */}
-        {weekDates.length > 0 && students.length > 0 && (
+        {/* --- MARKS OVERVIEW SECTION --- */}
+        {/* FIX: Only check for 'selected' to MOUNT the container, ensuring printRef is always set if a lab is loaded. */}
+        {selected && (
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -541,7 +606,7 @@ export default function FacultyEnterMarks(){
                   </svg>
                   <span>{showMarksOverview ? "Hide Details" : "Show Details"}</span>
                 </button>
-                {showMarksOverview && (
+                {showMarksOverview && weekDates.length > 0 && students.length > 0 && (
                   <button
                     onClick={handlePrint}
                     className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
@@ -555,78 +620,114 @@ export default function FacultyEnterMarks(){
               </div>
             </div>
             
-            {showMarksOverview && (
+            {/* Always render print content container (if selected is true), but control its visibility/size for non-print view */}
+            <div 
+              className="print-container"
+              style={{ 
+                visibility: showMarksOverview ? 'visible' : 'hidden',
+                position: showMarksOverview ? 'relative' : 'absolute',
+                height: showMarksOverview ? 'auto' : '1px',
+                width: showMarksOverview ? 'auto' : '1px',
+                overflow: showMarksOverview ? 'visible' : 'hidden'
+              }}
+            >
+              {/* This is the REF target - it is now always in the DOM when a lab is selected */}
               <div className="overflow-x-auto" ref={printRef}>
-              {/* Print Header - Only visible when printing */}
-              <div className="hidden print:block mb-4">
-                <h1 className="text-xl font-bold text-center mb-1">Lab Marks Overview</h1>
-                <div className="text-center mb-2">
-                  <p className="text-sm font-medium">{getCurrentAssignment()?.labId?.labName} - {getCurrentAssignment()?.section} {batch && batch !== "All" ? `(${batch})` : ""}</p>
-                  <p className="text-xs text-gray-600">Generated on {dayjs().format('MMMM DD, YYYY')}</p>
-                </div>
-                <div className="text-xs text-center mb-2">
-                  <p className="font-semibold">Legend: Pr(5) = Preparation | PE(5) = Program Execution | P(10) = Viva | R(5) = Record | C(5) = Regularity | T(30) = Total</p>
-                </div>
-              </div>
+                
+                {/* Conditionally render the table CONTENT based on data availability */}
+                {weekDates.length > 0 && students.length > 0 ? (
+                  <>
+                    {/* Print Header - Only visible when printing */}
+                    <div className="hidden print:block mb-4 border-b pb-2">
+                      <h1 className="text-xl font-bold text-center mb-1">Lab Marks Overview</h1>
+                      <div className="text-center mb-2">
+                        <p className="text-sm font-medium">{getCurrentAssignment()?.labId?.labName} - {getCurrentAssignment()?.section} {batch && batch !== "All" ? `(${batch})` : ""}</p>
+                        <p className="text-xs text-gray-600">Generated on {dayjs().format('MMMM DD, YYYY')}</p>
+                      </div>
+                      <div className="text-xs text-center mb-2">
+                        <p className="font-semibold">Legend: Pr(5) = Preparation | PE(5) = Program Execution | P(10) = Viva | R(5) = Record | C(5) = Regularity | T(30) = Total</p>
+                      </div>
+                    </div>
 
-              <table className="w-full text-xs print:text-xs">
-                <thead>
-                  <tr className="border-b-2 border-gray-300 print:border-gray-600">
-                    <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16 print:text-xs">Roll</th>
-                    <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32 print:text-xs">Name</th>
-                    {weekDates.map(weekDate => {
-                      const weekData = marksByWeek[weekDate];
-                      return (
-                        <th 
-                          key={weekDate} 
-                          className="text-center py-2 px-1 font-semibold text-gray-700 w-16 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default print:text-xs"
-                          onClick={() => handleEditWeek(weekDate)}
-                          title={`Click to edit Week ${weekData.weekNumber} marks`}
-                        >
-                          <div>
-                            <div className="font-medium text-xs">W{weekData.weekNumber}</div>
-                            <div className="text-gray-500 text-[10px] print:text-[8px]">{weekData.displayDate}</div>
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map(student => (
-                    <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50 print:border-gray-300">
-                      <td className="py-2 px-2 font-medium text-gray-900 print:text-xs">{student.username}</td>
-                      <td className="py-2 px-2 text-gray-900 print:text-xs">{student.name}</td>
-                      {weekDates.map(weekDate => {
-                        const weekData = marksByWeek[weekDate];
-                        const studentMarks = weekData.students[student._id];
-                        const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
+                    {/* Two-column layout for better visibility */}
+                    <div className="flex gap-4 print:flex-row">
+                      {(() => {
+                        // Split students into two columns
+                        const midPoint = Math.ceil(students.length / 2);
+                        const column1Students = students.slice(0, midPoint);
+                        const column2Students = students.slice(midPoint);
                         
-                        return (
-                          <td 
-                            key={weekDate} 
-                            className="text-center py-2 px-1 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default"
-                            onClick={() => handleEditWeek(weekDate)}
-                          >
-                            <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold print:border print:border-gray-400 ${
-                              total !== null && total !== undefined && total !== ''
-                                ? 'bg-green-100 text-green-800 print:bg-white print:text-gray-900'
-                                : 'bg-gray-100 text-gray-500 print:bg-white print:text-gray-500'
-                            }`}>
-                              {total !== null && total !== undefined && total !== '' 
-                                ? total 
-                                : '-'
-                              }
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        return [column1Students, column2Students].map((columnStudents, colIndex) => (
+                          <div key={colIndex} className="flex-1 min-w-0">
+                            <table className="w-full text-xs print:text-xs">
+                              <thead>
+                                <tr className="border-b-2 border-gray-300 print:border-gray-600">
+                                  <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16 print:text-xs">Roll</th>
+                                  <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32 print:text-xs">Name</th>
+                                  {weekDates.map(weekDate => {
+                                    const weekData = marksByWeek[weekDate];
+                                    return (
+                                      <th 
+                                        key={weekDate} 
+                                        className="text-center py-2 px-1 font-semibold text-gray-700 w-16 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default print:text-xs"
+                                        onClick={() => handleEditWeek(weekDate)}
+                                        title={`Click to edit Week ${weekData.weekNumber} marks`}
+                                      >
+                                        <div>
+                                          <div className="font-medium text-xs">W{weekData.weekNumber}</div>
+                                          <div className="text-gray-500 text-[10px] print:text-[8px]">{weekData.displayDate}</div>
+                                        </div>
+                                      </th>
+                                    );
+                                  })}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {columnStudents.map(student => (
+                                  <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50 print:border-gray-300">
+                                    <td className="py-2 px-2 font-medium text-gray-900 print:text-xs">{student.username}</td>
+                                    <td className="py-2 px-2 text-gray-900 print:text-xs">{student.name}</td>
+                                    {weekDates.map(weekDate => {
+                                      const weekData = marksByWeek[weekDate];
+                                      const studentMarks = weekData.students[student._id];
+                                      const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
+                                      
+                                      return (
+                                        <td 
+                                          key={weekDate} 
+                                          className="text-center py-2 px-1 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default"
+                                          onClick={() => handleEditWeek(weekDate)}
+                                        >
+                                          <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold print:border print:border-gray-400 ${
+                                            total !== null && total !== undefined && total !== ''
+                                              ? 'bg-green-100 text-green-800 print:bg-white print:text-gray-900'
+                                              : 'bg-gray-100 text-gray-500 print:bg-white print:text-gray-500'
+                                          }`}>
+                                            {total !== null && total !== undefined && total !== '' 
+                                              ? total 
+                                              : '-'
+                                            }
+                                          </span>
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  // Display a message if no data is available, only visible outside of print mode
+                  <div className="py-10 text-center text-gray-500 print:hidden">
+                    <p className="text-sm">Select a lab and ensure students/marks are loaded to view the overview.</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -650,7 +751,7 @@ export default function FacultyEnterMarks(){
 
               <div className="mb-6 bg-blue-50 p-4 rounded-lg">
                 <p className="text-blue-800 text-sm">
-                  Editing marks for <strong>Week {marksByWeek[selectedWeek]?.weekNumber}</strong>. 
+                  Editing marks for **Week {marksByWeek[selectedWeek]?.weekNumber}**. 
                   Update the marks below and click Save Changes.
                 </p>
               </div>

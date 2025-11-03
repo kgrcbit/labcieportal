@@ -287,3 +287,53 @@ body {
     transform: translateX(0);
   }
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: white;
+  }
+  
+  .print-container {
+    width: 100% !important;
+    display: block !important;
+    visibility: visible !important;
+    page-break-inside: avoid;
+  }
+  
+  /* Force show print container even if hidden via visibility */
+  .print-container {
+    visibility: visible !important;
+    position: relative !important;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  
+  .print-container table {
+    page-break-inside: auto;
+  }
+  
+  .print-container tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  .print-container thead {
+    display: table-header-group;
+  }
+  
+  .print-container tfoot {
+    display: table-footer-group;
+  }
+  
+  /* Hide non-printable elements */
+  button, .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure borders print */
+  table, th, td {
+    border: 1px solid #000 !important;
+  }
+}
