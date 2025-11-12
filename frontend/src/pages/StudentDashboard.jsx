@@ -167,14 +167,19 @@ export default function StudentDashboard(){
               <p className="text-center text-sm">{selectedLab.labName} • Faculty: {selectedLab.faculty || "TBD"}</p>
             </div>
 
-            {/* Marks Table - Minimal */}
+            {/* Marks Table - With Rubrics */}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 font-medium text-gray-700">Week</th>
                     <th className="text-left py-3 font-medium text-gray-700">Date</th>
-                    <th className="text-left py-3 font-medium text-gray-700">CIE Marks</th>
+                    <th className="text-center py-3 font-medium text-gray-700">Pr</th>
+                    <th className="text-center py-3 font-medium text-gray-700">PE</th>
+                    <th className="text-center py-3 font-medium text-gray-700">P</th>
+                    <th className="text-center py-3 font-medium text-gray-700">R</th>
+                    <th className="text-center py-3 font-medium text-gray-700">C</th>
+                    <th className="text-center py-3 font-medium text-gray-700">T</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,7 +187,12 @@ export default function StudentDashboard(){
                     <tr key={i} className="border-b border-gray-100">
                       <td className="py-3 text-gray-900">Week {i + 1}</td>
                       <td className="py-3 text-gray-900">{dayjs(s.date).format("DD MMM YYYY")}</td>
-                      <td className="py-3 text-gray-900">{s.marks ?? "-"}</td>
+                      <td className="py-3 text-center text-gray-900">{s.Pr ?? '-'}</td>
+                      <td className="py-3 text-center text-gray-900">{s.PE ?? '-'}</td>
+                      <td className="py-3 text-center text-gray-900">{s.P ?? '-'}</td>
+                      <td className="py-3 text-center text-gray-900">{s.R ?? '-'}</td>
+                      <td className="py-3 text-center text-gray-900">{s.C ?? '-'}</td>
+                      <td className="py-3 text-center text-gray-900">{(s.T ?? s.marks) ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>

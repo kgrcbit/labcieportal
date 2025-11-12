@@ -3,7 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function NavBar(){
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  // Only show user if a token exists to avoid stale/default user display in the navbar
+  const token = localStorage.getItem("token");
+  const user = token ? JSON.parse(localStorage.getItem("user") || "null") : null;
 
   const logout = () => {
     localStorage.removeItem("token");

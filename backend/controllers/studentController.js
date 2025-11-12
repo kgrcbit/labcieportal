@@ -45,7 +45,16 @@ export const getStudentMarks = async (req, res) => {
       weekly.forEach(weeklyMark => {
         groupedMarks[labId].sessions.push({
           date: weeklyMark.date,
-          // prefer T if present, else marks (backward compat)
+          // rubric breakdown (added fields, backward compatible)
+          Pr: weeklyMark.Pr !== null && weeklyMark.Pr !== undefined ? weeklyMark.Pr : null,
+          PE: weeklyMark.PE !== null && weeklyMark.PE !== undefined ? weeklyMark.PE : null,
+          P: weeklyMark.P !== null && weeklyMark.P !== undefined ? weeklyMark.P : null,
+          R: weeklyMark.R !== null && weeklyMark.R !== undefined ? weeklyMark.R : null,
+          C: weeklyMark.C !== null && weeklyMark.C !== undefined ? weeklyMark.C : null,
+          T: weeklyMark.T !== null && weeklyMark.T !== undefined
+            ? weeklyMark.T
+            : (weeklyMark.marks !== null && weeklyMark.marks !== undefined ? weeklyMark.marks : null),
+          // keep legacy total value under 'marks' as well
           marks: weeklyMark.T !== null && weeklyMark.T !== undefined ? weeklyMark.T : weeklyMark.marks,
           enteredBy: mark.enteredBy ? mark.enteredBy.name : "Unknown"
         });

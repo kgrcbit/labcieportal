@@ -633,74 +633,132 @@ export default function FacultyEnterMarks(){
                 {/* Conditionally render the table CONTENT based on data availability */}
                 {weekDates.length > 0 && students.length > 0 ? (
                   <>
-                    {/* Print Header - Only visible when printing */}
-                    <div className="hidden print:block mb-4 border-b pb-2">
-                      <h1 className="text-xl font-bold text-center mb-1">Lab Marks Overview</h1>
-                      <div className="text-center mb-2">
-                        <p className="text-sm font-medium">{getCurrentAssignment()?.labId?.labName} - {getCurrentAssignment()?.section} {batch && batch !== "All" ? `(${batch})` : ""}</p>
-                        <p className="text-xs text-gray-600">Generated on {dayjs().format('MMMM DD, YYYY')}</p>
-                      </div>
-                      <div className="text-xs text-center mb-2">
-                        <p className="font-semibold">Legend: Pr(5) = Preparation | PE(5) = Program Execution | P(10) = Viva | R(5) = Record | C(5) = Regularity | T(30) = Total</p>
+                    {/* Print-specific styles and layout */}
+                    <style>
+                      {`
+                        @media print {
+                          @page { size: landscape; margin: 8mm; }
+                          body { font-family: Calibri, Arial, sans-serif; font-size: 9pt; }
+                          .print-compact-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                          .print-compact-table th, .print-compact-table td { border: 1px solid #d1d5db; padding: 4px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+                          .print-compact-table thead { display: table-header-group; }
+                          .print-compact-table tfoot { display: table-footer-group; }
+                          .print-compact-table tbody tr:nth-child(even) { background: #f9fafb; }
+                          .print-compact-table th { font-size: 8.5pt; }
+                          .print-compact-table td { font-size: 8.5pt; }
+                          .print-title { font-weight: 700; text-align: center; margin-bottom: 4px; }
+                          .print-subtitle { text-align: center; margin-bottom: 2px; }
+                          .print-legend { text-align: center; margin: 6px 0 10px; font-size: 8.5pt; }
+                          .screen-only { display: none !important; }
+                          .page-footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 9pt; }
+                          .page-footer .page-numbers:after { content: counter(page) ' of ' counter(pages); }
+                        }
+                      `}
+                    </style>
+
+                    {/* Screen table (unchanged) */}
+                    <div className="screen-only">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b-2 border-gray-300">
+                            <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16">Roll</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32">Name</th>
+                            {weekDates.map(weekDate => {
+                              const weekData = marksByWeek[weekDate];
+                              return (
+                                <th key={weekDate} className="text-center py-2 px-1 font-semibold text-gray-700 w-16">
+                                  <div>
+                                    <div className="font-medium text-xs">W{weekData.weekNumber}</div>
+                                    <div className="text-gray-500 text-[10px]">{weekData.displayDate}</div>
+                                    {/* Edit action for this week (visible on screen only) */}
+                                    {students.length > 0 && (
+                                      <div className="mt-1">
+                                        <button
+                                          onClick={() => handleEditWeek(weekDate)}
+                                          className="text-xs text-blue-600 hover:underline"
+                                        >
+                                          Edit
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map(student => (
+                            <tr key={student._id} className="border-b border-gray-200">
+                              <td className="py-2 px-2 font-medium text-gray-900">{student.username}</td>
+                              <td className="py-2 px-2 text-gray-900">{student.name}</td>
+                              {weekDates.map(weekDate => {
+                                const weekData = marksByWeek[weekDate];
+                                const studentMarks = weekData.students[student._id];
+                                const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
+                                return (
+                                  <td key={weekDate} className="text-center py-2 px-1">
+                                    <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold ${
+                                      total !== null && total !== undefined && total !== '' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                      {total !== null && total !== undefined && total !== '' ? total : '-'}
+                                    </span>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Print header */}
+                    <div className="hidden print:block">
+                      <div className="print-title text-xl">Enterprise Application Development Lab – {getCurrentAssignment()?.section} {batch && batch !== 'All' ? `( ${batch} )` : ''}</div>
+                      <div className="print-subtitle font-bold">Lab Marks Overview (Compact View – Without Names)</div>
+                      <div className="print-legend">
+                        <strong>Legend:</strong> 1 = Preparation (Pr) | 2 = Program Execution (PE) | 3 = Viva (P10) | 4 = Record (R) | 5 = Regularity (C) | 6 = Total (T)
                       </div>
                     </div>
 
-                    {/* Single-column layout showing all weeks marks for students */}
-                    <table className="w-full text-xs print:text-xs">
+                    {/* Print table - Compact numeric mapping */}
+                    <table className="hidden print:table print-compact-table">
                       <thead>
-                        <tr className="border-b-2 border-gray-300 print:border-gray-600">
-                          <th className="text-left py-2 px-2 font-semibold text-gray-700 w-16 print:text-xs">Roll</th>
-                          <th className="text-left py-2 px-2 font-semibold text-gray-700 min-w-32 print:text-xs">Name</th>
+                        <tr>
+                          <th className="font-bold">Roll</th>
                           {weekDates.map(weekDate => {
                             const weekData = marksByWeek[weekDate];
                             return (
-                              <th 
-                                key={weekDate} 
-                                className="text-center py-2 px-1 font-semibold text-gray-700 w-16 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default print:text-xs"
-                                onClick={() => handleEditWeek(weekDate)}
-                                title={`Click to edit Week ${weekData.weekNumber} marks`}
-                              >
-                                <div>
-                                  <div className="font-medium text-xs">W{weekData.weekNumber}</div>
-                                  <div className="text-gray-500 text-[10px] print:text-[8px]">{weekData.displayDate}</div>
-                                </div>
-                              </th>
+                              <th key={weekDate} className="font-bold">W{weekData.weekNumber}</th>
                             );
                           })}
                         </tr>
                       </thead>
                       <tbody>
-                        {students.map(student => (
-                          <tr key={student._id} className="border-b border-gray-200 hover:bg-gray-50 print:border-gray-300">
-                            <td className="py-2 px-2 font-medium text-gray-900 print:text-xs">{student.username}</td>
-                            <td className="py-2 px-2 text-gray-900 print:text-xs">{student.name}</td>
+                        {students.map((student, rowIdx) => (
+                          <tr key={student._id} className={rowIdx % 2 === 1 ? 'bg-gray-50' : ''}>
+                            <td className="font-semibold text-center">{student.username}</td>
                             {weekDates.map(weekDate => {
                               const weekData = marksByWeek[weekDate];
-                              const studentMarks = weekData.students[student._id];
-                              const total = studentMarks && studentMarks.T !== null && studentMarks.T !== undefined ? studentMarks.T : null;
-                              
+                              const sm = weekData.students[student._id] || {};
+                              const v = (x) => (x !== null && x !== undefined && x !== '' ? x : '-');
+                              const cell = `1=${v(sm.Pr)} | 2=${v(sm.PE)} | 3=${v(sm.P)} | 4=${v(sm.R)} | 5=${v(sm.C)} | 6=${v(sm.T)}`;
                               return (
-                                <td 
-                                  key={weekDate} 
-                                  className="text-center py-2 px-1 cursor-pointer hover:bg-gray-50 transition-colors print:cursor-default"
-                                  onClick={() => handleEditWeek(weekDate)}
-                                >
-                                  <span className={`inline-flex items-center justify-center w-10 h-6 rounded text-xs font-semibold print:border print:border-gray-400 ${
-                                    total !== null && total !== undefined && total !== ''
-                                      ? 'bg-green-100 text-green-800 print:bg-white print:text-gray-900'
-                                      : 'bg-gray-100 text-gray-500 print:bg-white print:text-gray-500'
-                                  }`}>
-                                    {total !== null && total !== undefined && total !== '' 
-                                      ? total 
-                                      : '-'
-                                    }
-                                  </span>
-                                </td>
+                                <td key={weekDate} className="text-center">{cell}</td>
                               );
                             })}
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={1 + weekDates.length}>
+                            <div className="page-footer">
+                              Generated on {dayjs().format('MMMM DD, YYYY')} | Page <span className="page-numbers"></span>
+                            </div>
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </>
                 ) : (
@@ -716,15 +774,15 @@ export default function FacultyEnterMarks(){
 
         {/* Edit Marks Modal */}
         {editingWeek && selectedWeek && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-white z-50 overflow-auto">
+            <div className="p-6 w-full h-full">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold">
                   Edit Marks - Week {marksByWeek[selectedWeek]?.weekNumber} ({marksByWeek[selectedWeek]?.displayDate})
                 </h3>
                 <button
                   onClick={cancelEdit}
-                  className="text-gray-500 hover:text-gray-700 p-1"
+                  className="text-gray-500 hover:text-gray-700 p-4"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -739,7 +797,7 @@ export default function FacultyEnterMarks(){
                 </p>
               </div>
 
-              <div className="overflow-x-auto max-h-[60vh]">
+              <div className="overflow-x-auto h-[calc(100vh-220px)]">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b-2 border-gray-300">
